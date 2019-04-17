@@ -11,7 +11,7 @@
 #define		MOSI	0x08
 #define		CLK		0x10
 #define		CS		0x20
-#define		HOLD	100
+#define		HOLD	50
 
 
 void init(){
@@ -46,14 +46,10 @@ void lcdPrint(char* outStr, char dataBit){
 
 	for(i = 0; i<leng; i++){		// over each char in array
 		for(k = 0; k<8; k++){		// for each bit in char
-			if(outStr[k] & 0x80){
-				(P2OUT |= MOSI);
-			}
-			else{
-				(P2OUT &= ~MOSI);
-			}
+			if(outStr[i] & 0x80)(P2OUT |= MOSI);
+			else (P2OUT &= ~MOSI);
 
-			outStr[k] <<= 1;
+			outStr[i] <<= 1;
 
 			P2OUT &= ~CLK;
 			__delay_cycles(HOLD);
@@ -70,6 +66,21 @@ void lcdPrint(char* outStr, char dataBit){
 
 }
 
+void moveCursor(char loc){
+	unsigned char address[32] = {0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,
+							     0x88,0x89,0x8A,0x8B,0x8C,0x8D,0x8E,0x8F,
+							     0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7,
+							     0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF};
+
+	char g = address[loc];
+	char *aPntr;
+
+	aPntr = &g;
+
+	lcdPrint(aPntr,0);
+}
+
+
 int stringLeng(char* inStr){
 	unsigned int k = 0;
 
@@ -79,6 +90,5 @@ int stringLeng(char* inStr){
 
 	return k;
 }
-
 
 
