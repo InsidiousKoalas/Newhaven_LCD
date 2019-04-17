@@ -1,3 +1,4 @@
+
 /*
  * LCD_funks.h
  *
@@ -10,7 +11,8 @@
 
 void init();
 void lcdPrint(char*, char);
-
+void moveCursor(char);
 int stringLeng(char*);
+
 
 #endif /* LCD_FUNKS_H_ */
