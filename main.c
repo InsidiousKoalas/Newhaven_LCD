@@ -14,12 +14,22 @@ int main(void) {
     P2OUT |= 0x20;
 
 	int leng;
-	char test[5] = "hello";
+	char buffer[32] = "Testing...";
 
 	init();
-	lcdPrint(test,1);
+	lcdPrint(buffer,1);
+
+	int i = 1;
 
 	while(1){
+		if(i==1){
+			moveCursor(16);
+			buffer[0] = 'L';
+			buffer[1] = 'o';
+			buffer[2] = 'w';
+			lcdPrint(buffer,1);
+			i++;
+		}
 
 	}
 
