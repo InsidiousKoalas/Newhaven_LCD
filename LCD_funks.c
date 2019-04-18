@@ -11,30 +11,43 @@
 #define		MOSI	0x08
 #define		CLK		0x10
 #define		CS		0x20
-#define		HOLD	50
+#define		HOLD	70
 
 
+/*
+ * calls lcdPrint; initializes LCD to default settings
+ */
 void init(){
-
-
 	char commands[13] = {0x30, 0x30, 0x39, 0x14,
 						 0x56, 0x6D, 0x70, 0x0F,
 						 0x06, 0x01};
 
 	lcdPrint(commands,0,0);
-
-
 }
 
+/*
+ * Sends data (either commands or characters to display) to
+ * the LCD.
+ *
+ * Inputs:
+ *
+ * 		outStr:		data sent to LCD
+ * 		dataBit:	if command, == 0; data, == 1
+ * 		csrPos:		the current position of the cursor
+ * 					(does not matter for command)
+ *
+ * If a command, returns a 0 when complete. If data,
+ * returns the new cursor position.
+ *
+ * Calls jmpLine(dir) when reaches end of line
+ *
+ */
 int lcdPrint(char* outStr, char dataBit, int csrPos){
-	int leng, i, k, line;
-
-	if(csrPos<16)(line = 1);
-	else(line = 2);
+	int leng, i, k;
 
 	leng = stringLeng(outStr);
+	if(leng==0)(leng=1);
 
-//	P2OUT &= ~CLK;
 	P2OUT &= ~CS;
 	if(dataBit == 1){
 		(P2OUT |= RS);
@@ -58,9 +71,24 @@ int lcdPrint(char* outStr, char dataBit, int csrPos){
 			__delay_cycles(HOLD);
 			P2OUT &= ~CLK;
 		}
+
+		// delay cycle for initial 'wake up' command
 		if((i == 0) && (dataBit == 0))(__delay_cycles(HOLD*20));
 		__delay_cycles(HOLD);
 
+		// increment position index
+		csrPos++;
+
+		// jump to next line?
+		if(csrPos==16){
+			jmpLine(1);
+		}
+
+		// return to line 1?
+		else if(csrPos==32){
+			jmpLine(0);
+			csrPos = 0;
+		}
 
 	}
 
@@ -71,13 +99,14 @@ int lcdPrint(char* outStr, char dataBit, int csrPos){
 		return csrPos;
 	}
 	else{
-		return 1;
+		return 0;
 	}
 }
 
 
 /*
- *
+ *	Jumps cursor to character index input as a char
+ *	by calling lcdPrint
  */
 void moveCursor(char loc){
 	unsigned char address[32] = {0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,
@@ -93,7 +122,9 @@ void moveCursor(char loc){
 	g = lcdPrint(aPntr,0,loc-1);
 }
 
-
+/*
+ * returns the length of a string from the char pointer to it
+ */
 int stringLeng(char* inStr){
 	unsigned int k = 0;
 
@@ -104,14 +135,116 @@ int stringLeng(char* inStr){
 	return k;
 }
 
-void backSpace(char *buffer){
-//	int leng = stringLeng(buffer);
-//	volatile int k;
-//
-//	for(k=0; k<(leng-1);k++){
-//		buffer[k] = buffer[k];
-//	}
-//
-//	lcdPrint(buffer,1);
+
+/*
+ * This function removes the character
+ * immediately preceding the cursor.
+ */
+int backSpace(int csrPos){
+	char bkSp = 0x20;		// empty character
+	char *bPtr = &bkSp;		// pointer to char (bc lcdPrint takes char*)
+
+
+	moveCursor(csrPos-1);	// send empty character to preceding space
+	csrPos = lcdPrint(bPtr,1,csrPos);	// write character
+
+	// prevents backspacing beyond screen boundary,
+	// does not enable text wrapping from row 0 to
+	// row 1
+	if(csrPos>1){
+		moveCursor(csrPos-2);
+		return csrPos-2;
+	}
+	else{
+		moveCursor(0);
+		return 0;
+	}
+}
+
+
+/*
+ * Jump line command. Moves cursor to lines on LCD
+ * following the convention:
+ *
+ * 				 Display
+ * 		 	 ----------------
+ * 	Row 0:	|################|
+ * 	Row 1:	|################|
+ *  	 	 ----------------
+ *
+ *  jmpLine(0) moves the cursor to line 0.
+ *  jmpLine(1) moves the cursor to line 1.
+ *
+ *  differs from moveCursor because moveCursor calls
+ *  lcdPrint whereas jmpLine interrupts lcdPrint
+ *
+ */
+void jmpLine(char row){
+	int k, line;
+	int line1 = 0x80;
+	int line2 = 0xC0;
+
+	if(row == 1)(line = line2);
+	else(line = line1);
+
+	P2OUT &= ~RS;	// send command bit
+
+	__delay_cycles(HOLD);
+	for(k = 0; k<8; k++){		// for each bit in char
+		if(line & 0x80)(P2OUT |= MOSI);
+		else (P2OUT &= ~MOSI);
+
+		line <<= 1;
+
+		P2OUT &= ~CLK;
+		__delay_cycles(HOLD);
+		P2OUT |= CLK;
+		__delay_cycles(HOLD);
+		P2OUT &= ~CLK;
+		__delay_cycles(HOLD);
+	}
+
+	P2OUT |= RS;
+	__delay_cycles(HOLD*3);
+
+}
+
+int lcdPrintByte(char byte, int csrPos){
+	int k;
+
+
+
+	P2OUT &= ~CS;
+	P2OUT |= RS;	// send command bit
+
+	__delay_cycles(HOLD);
+	for(k = 0; k<8; k++){		// for each bit in char
+		if(byte & 0x80)(P2OUT |= MOSI);
+		else (P2OUT &= ~MOSI);
+
+		byte <<= 1;
+
+		P2OUT &= ~CLK;
+		__delay_cycles(HOLD);
+		P2OUT |= CLK;
+		__delay_cycles(HOLD);
+		P2OUT &= ~CLK;
+		__delay_cycles(HOLD);
+	}
+
+	csrPos++;
+
+	if(csrPos==16)(jmpLine(1));
+	else if(csrPos==32){
+		jmpLine(0);
+		csrPos = 0;
+	}
+
+	P2OUT |= CS;
+	__delay_cycles(HOLD*3);
+
+
+
+	return csrPos;
 
 }
