@@ -21,17 +21,18 @@ void init(){
 						 0x56, 0x6D, 0x70, 0x0F,
 						 0x06, 0x01};
 
-	lcdPrint(commands,0);
+	lcdPrint(commands,0,0);
 
 
 }
 
-void lcdPrint(char* outStr, char dataBit){
-	int leng, i, k;
+int lcdPrint(char* outStr, char dataBit, int csrPos){
+	int leng, i, k, line;
 
+	if(csrPos<16)(line = 1);
+	else(line = 2);
 
 	leng = stringLeng(outStr);
-
 
 //	P2OUT &= ~CLK;
 	P2OUT &= ~CS;
@@ -59,13 +60,25 @@ void lcdPrint(char* outStr, char dataBit){
 		}
 		if((i == 0) && (dataBit == 0))(__delay_cycles(HOLD*20));
 		__delay_cycles(HOLD);
+
+
 	}
 
-
+	__delay_cycles(HOLD*10);
 	P2OUT |= CS;
 
+	if(dataBit == 1){
+		return csrPos;
+	}
+	else{
+		return 1;
+	}
 }
 
+
+/*
+ *
+ */
 void moveCursor(char loc){
 	unsigned char address[32] = {0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,
 							     0x88,0x89,0x8A,0x8B,0x8C,0x8D,0x8E,0x8F,
@@ -77,7 +90,7 @@ void moveCursor(char loc){
 
 	aPntr = &g;
 
-	lcdPrint(aPntr,0);
+	g = lcdPrint(aPntr,0,loc-1);
 }
 
 
@@ -91,4 +104,14 @@ int stringLeng(char* inStr){
 	return k;
 }
 
+void backSpace(char *buffer){
+//	int leng = stringLeng(buffer);
+//	volatile int k;
+//
+//	for(k=0; k<(leng-1);k++){
+//		buffer[k] = buffer[k];
+//	}
+//
+//	lcdPrint(buffer,1);
 
+}

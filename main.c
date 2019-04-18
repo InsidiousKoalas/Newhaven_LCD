@@ -7,6 +7,8 @@
  *
  *
  */
+//void charHandler(char*);
+
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
 	
@@ -14,25 +16,40 @@ int main(void) {
     P2OUT |= 0x20;
 
 	int leng;
-	char buffer[32] = "Testing...";
+	char buffer[32] = "Testing the limits of sw";
 
 	init();
-	lcdPrint(buffer,1);
+	leng = lcdPrint(buffer,1,0);
 
-	int i = 1;
+	int i = 1, csrNdx = 0;
+	char bkSp = 0x20;
+	char *bPtr = &bkSp;
 
 	while(1){
 		if(i==1){
-			moveCursor(16);
-			buffer[0] = 'L';
-			buffer[1] = 'o';
-			buffer[2] = 'w';
-			lcdPrint(buffer,1);
+			csrNdx = 16;
+			moveCursor(csrNdx);
+			strcpy(buffer,"lego");
+			csrNdx = lcdPrint(buffer,1,csrNdx);
 			i++;
 		}
-
+//		if(i==2){
+//			backSpace(buffer);
+//		}
 	}
 
 	return 0;
 
 }
+//
+//
+//void charHandler(char* buffer){
+//	int leng = stringLeng(buffer);
+//	int csrPos;
+//
+//	if(leng<15)(csrPos = lcdPrint(buffer, 1, csrNdx);
+//	else{
+//		lcdPrint()
+//	}
+//}
+
